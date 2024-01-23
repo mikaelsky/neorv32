@@ -125,7 +125,8 @@ begin
       when "00" => -- C0: Register-Based Loads and Stores
         case ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) is
 
-          when "010" | "011" => -- C.LW / C.FLW (integer and float are identical as the FPU implements the Zfinx ISA extension)
+          -- "111" Removed as C.FLW is not supported for the Zfinx ISA extension
+          when "010" => -- -- C.LW
           -- ----------------------------------------------------------------------------------------------------------
             decoded(instr_opcode_msb_c downto instr_opcode_lsb_c) <= opcode_load_c;
             decoded(21 downto 20)                                 <= "00";
@@ -142,7 +143,8 @@ begin
               illegal <= '1';
             end if;
 
-          when "110" | "111" => -- C.SW / C.FSW (integer and float are identical as the FPU implements the Zfinx ISA extension)
+          -- "111" Removed as C.FSW is not supported for the Zfinx ISA extension
+          when "110" => -- C.SW
           -- ----------------------------------------------------------------------------------------------------------
             decoded(instr_opcode_msb_c downto instr_opcode_lsb_c) <= opcode_store_c;
             decoded(08 downto 07)                                 <= "00";
@@ -178,7 +180,9 @@ begin
             decoded(instr_imm12_lsb_c + 9)                        <= ci_instr16_i(10);
             --
             if (ci_instr16_i(12 downto 5) = "00000000") or -- canonical illegal C instruction or C.ADDI4SPN with nzuimm = 0
-               (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "001") or -- C.FLS / C.LQ
+               (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "011") or -- C.LSW / C.LD
+               (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "111") or -- C.FSW / C.SD, float stores are not supported for Zfinx
+               (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "001") or -- C.FLS / C.LQ, float loads are not supported for Zfinx
                (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "100") or -- reserved
                (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "101") then -- C.FSD / C.SQ
               illegal <= '1';
@@ -350,7 +354,8 @@ begin
               illegal <= '1';
             end if;
 
-          when "010" | "011" => -- C.LWSP / C.FLWSP (integer and float are identical as the FPU implements the Zfinx ISA extension)
+          -- "011" removed as C.FLWSP is not supported for Zfinx only integer loads are supported
+          when "010" => -- C.LWSP
           -- ----------------------------------------------------------------------------------------------------------
             decoded(instr_opcode_msb_c downto instr_opcode_lsb_c) <= opcode_load_c;
             decoded(21 downto 20)                                 <= "00";
@@ -368,7 +373,8 @@ begin
               illegal <= '1';
             end if;
 
-          when "110" | "111" => -- C.SWSP / C.FSWSP (integer and float are identical as the FPU implements the Zfinx ISA extension)
+          -- "111" removed as C.FSWSP is not supported for Zfinx only integer loads are supported
+          when "110" => -- C.SWSP 
           -- ----------------------------------------------------------------------------------------------------------
             decoded(instr_opcode_msb_c downto instr_opcode_lsb_c) <= opcode_store_c;
             decoded(08 downto 07)                                 <= "00";
@@ -420,6 +426,8 @@ begin
             end if;
             --
             if (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "001") or -- C.FLDSP / C.LQSP
+               (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "011") or -- C.FLWSP / C.LDSP, float loads are not supported for Zfinx
+               (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "111") or -- C.FSWSP / C.SDSP, float stores are not supported for Zfinx
                (ci_instr16_i(ci_funct3_msb_c downto ci_funct3_lsb_c) = "101") then -- C.FSDSP / C.SQSP
               illegal <= '1';
             end if;
