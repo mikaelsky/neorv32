@@ -46,6 +46,7 @@ use ieee.numeric_std.all;
 
 library neorv32;
 use neorv32.neorv32_package.all;
+use neorv32.neorv32_cpu_regfile_package.all;
 
 entity neorv32_cpu_regfile is
   generic (
@@ -78,8 +79,8 @@ architecture neorv32_cpu_regfile_rtl of neorv32_cpu_regfile is
   constant addr_bits_c : natural := cond_sel_natural_f(RVE_EN, 4, 5); -- address width
 
   -- register file --
-  type   reg_file_t is array ((2**addr_bits_c)-1 downto 0) of std_ulogic_vector(XLEN-1 downto 0);
-  signal reg_file : reg_file_t;
+  --type   reg_file_t is array ((2**addr_bits_c)-1 downto 0) of std_ulogic_vector(XLEN-1 downto 0);
+  signal reg_file : reg_file_t((2**addr_bits_c)-1 downto 0);
 
   -- access --
   signal rf_wdata  : std_ulogic_vector(XLEN-1 downto 0); -- write-back data
