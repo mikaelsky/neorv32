@@ -48,6 +48,7 @@ use ieee.numeric_std.all;
 
 library neorv32;
 use neorv32.neorv32_package.all;
+use neorv32.neorv32_cpu_control_package.all;
 
 entity neorv32_cpu_control is
   generic (
@@ -151,16 +152,16 @@ architecture neorv32_cpu_control_rtl of neorv32_cpu_control is
   signal ipb : ipb_t;
 
   -- instruction issue engine --
-  type issue_engine_t is record
-    align     : std_ulogic;
-    align_set : std_ulogic;
-    align_clr : std_ulogic;
-    ci_i16    : std_ulogic_vector(15 downto 0);
-    ci_i32    : std_ulogic_vector(31 downto 0);
-    data      : std_ulogic_vector((2+32)-1 downto 0); -- is_compressed & bus_error & 32-bit instruction
-    valid     : std_ulogic_vector(1 downto 0); -- data word is valid
-    ack       : std_ulogic;
-  end record;
+--  type issue_engine_t is record
+--    align     : std_ulogic;
+--    align_set : std_ulogic;
+--    align_clr : std_ulogic;
+--    ci_i16    : std_ulogic_vector(15 downto 0);
+--    ci_i32    : std_ulogic_vector(31 downto 0);
+--    data      : std_ulogic_vector((2+32)-1 downto 0); -- is_compressed & bus_error & 32-bit instruction
+--    valid     : std_ulogic_vector(1 downto 0); -- data word is valid
+--    ack       : std_ulogic;
+--  end record;
   signal issue_engine : issue_engine_t;
 
   -- instruction decoding helper logic --
@@ -181,6 +182,7 @@ architecture neorv32_cpu_control_rtl of neorv32_cpu_control is
 
   -- instruction execution engine --
   -- make sure reset state is the first item in the list (discussion #415)
+<<<<<<< HEAD
   type execute_engine_state_t is (DISPATCH, TRAP_ENTER, TRAP_EXIT, RESTART, FENCE, SLEEP,
                                   EXECUTE, ALU_WAIT, BRANCH, BRANCHED, SYSTEM, MEM_REQ, MEM_WAIT);
   type execute_engine_t is record
@@ -197,6 +199,26 @@ architecture neorv32_cpu_control_rtl of neorv32_cpu_control is
     next_pc_inc  : std_ulogic_vector(XLEN-1 downto 0); -- increment to get next PC
     link_pc      : std_ulogic_vector(XLEN-1 downto 0); -- next PC for linking (return address)
   end record;
+=======
+--  type execute_engine_state_t is (DISPATCH, TRAP_ENTER, TRAP_EXIT, RESTART, FENCE, SLEEP,
+--                                  EXECUTE, ALU_WAIT, BRANCH, BRANCHED, SYSTEM, MEM_REQ, MEM_WAIT);
+--  type execute_engine_t is record
+--    state        : execute_engine_state_t;
+--    state_nxt    : execute_engine_state_t;
+--    state_prev   : execute_engine_state_t;
+--    state_prev2  : execute_engine_state_t;
+--    ir           : std_ulogic_vector(31 downto 0);
+--    ir_nxt       : std_ulogic_vector(31 downto 0);
+--    is_ci        : std_ulogic; -- current instruction is de-compressed instruction
+--    is_ci_nxt    : std_ulogic;
+--    branch_taken : std_ulogic; -- branch condition fulfilled
+--    pc           : std_ulogic_vector(XLEN-1 downto 0); -- actual PC, corresponding to current executed instruction
+--    pc_we        : std_ulogic; -- PC update enabled
+--    next_pc      : std_ulogic_vector(XLEN-1 downto 0); -- next PC, corresponding to next instruction to be executed
+--    next_pc_inc  : std_ulogic_vector(XLEN-1 downto 0); -- increment to get next PC
+--    link_pc      : std_ulogic_vector(XLEN-1 downto 0); -- next PC for linking (return address)
+--  end record;
+>>>>>>> cdbe5e05 (Update neorv32_cpu_control.vhd)
   signal execute_engine : execute_engine_t;
 
   -- execution monitor --
@@ -211,33 +233,34 @@ architecture neorv32_cpu_control_rtl of neorv32_cpu_control is
   signal sleep_mode : std_ulogic;
 
   -- trap controller --
-  type trap_ctrl_t is record
-    exc_buf     : std_ulogic_vector(exc_width_c-1 downto 0); -- synchronous exception buffer (one bit per exception)
-    exc_fire    : std_ulogic; -- set if there is a valid source in the exception buffer
-    irq_pnd     : std_ulogic_vector(irq_width_c-1 downto 0); -- pending interrupt
-    irq_buf     : std_ulogic_vector(irq_width_c-1 downto 0); -- asynchronous exception/interrupt buffer (one bit per interrupt source)
-    irq_fire    : std_ulogic; -- set if an interrupt is actually kicking in
-    cause       : std_ulogic_vector(6 downto 0); -- trap ID for mcause CSR & debug-mode entry identifier
-    epc         : std_ulogic_vector(XLEN-1 downto 0); -- exception program counter
-    --
-    env_pending : std_ulogic; -- start of trap environment if pending
-    env_enter   : std_ulogic; -- enter trap environment
-    env_exit    : std_ulogic; -- leave trap environment
-    wakeup      : std_ulogic; -- wakeup from sleep due to an enabled pending IRQ
-    --
-    instr_be    : std_ulogic; -- instruction fetch bus error
-    instr_ma    : std_ulogic; -- instruction fetch misaligned address
-    instr_il    : std_ulogic; -- illegal instruction
-    ecall       : std_ulogic; -- ecall instruction
-    ebreak      : std_ulogic; -- ebreak instruction
-    hwtrig      : std_ulogic; -- hardware trigger module
-  end record;
+--  type trap_ctrl_t is record
+--    exc_buf     : std_ulogic_vector(exc_width_c-1 downto 0); -- synchronous exception buffer (one bit per exception)
+--    exc_fire    : std_ulogic; -- set if there is a valid source in the exception buffer
+--    irq_pnd     : std_ulogic_vector(irq_width_c-1 downto 0); -- pending interrupt
+--    irq_buf     : std_ulogic_vector(irq_width_c-1 downto 0); -- asynchronous exception/interrupt buffer (one bit per interrupt source)
+--    irq_fire    : std_ulogic; -- set if an interrupt is actually kicking in
+--    cause       : std_ulogic_vector(6 downto 0); -- trap ID for mcause CSR & debug-mode entry identifier
+--    epc         : std_ulogic_vector(XLEN-1 downto 0); -- exception program counter
+--    --
+--    env_pending : std_ulogic; -- start of trap environment if pending
+--    env_enter   : std_ulogic; -- enter trap environment
+--    env_exit    : std_ulogic; -- leave trap environment
+--    wakeup      : std_ulogic; -- wakeup from sleep due to an enabled pending IRQ
+--    --
+--    instr_be    : std_ulogic; -- instruction fetch bus error
+--    instr_ma    : std_ulogic; -- instruction fetch misaligned address
+--    instr_il    : std_ulogic; -- illegal instruction
+--    ecall       : std_ulogic; -- ecall instruction
+--    ebreak      : std_ulogic; -- ebreak instruction
+--    hwtrig      : std_ulogic; -- hardware trigger module
+--  end record;
   signal trap_ctrl : trap_ctrl_t;
 
   -- CPU main control bus --
   signal ctrl, ctrl_nxt : ctrl_bus_t;
 
   -- control and status registers (CSRs) --
+<<<<<<< HEAD
   type csr_t is record
     addr           : std_ulogic_vector(11 downto 0); -- csr address
     raddr          : std_ulogic_vector(11 downto 0); -- simplified csr read address
@@ -287,43 +310,96 @@ architecture neorv32_cpu_control_rtl of neorv32_cpu_control is
     tdata1_rd      : std_ulogic_vector(XLEN-1 downto 0); -- trigger register read-back
     tdata2         : std_ulogic_vector(XLEN-1 downto 0); -- address-match register
   end record;
+=======
+--  type csr_t is record
+--    addr             : std_ulogic_vector(11 downto 0); -- csr address
+--    raddr            : std_ulogic_vector(11 downto 0); -- simplified csr read address
+--    we, we_nxt       : std_ulogic; -- csr write enable
+--    re, re_nxt       : std_ulogic; -- csr read enable
+--    wdata, rdata     : std_ulogic_vector(XLEN-1 downto 0); -- csr write/read data
+--    --
+--    mstatus_mie      : std_ulogic; -- machine-mode IRQ enable
+--    mstatus_mpie     : std_ulogic; -- previous machine-mode IRQ enable
+--    mstatus_mpp      : std_ulogic; -- machine previous privilege mode
+--    mstatus_mprv     : std_ulogic; -- effective privilege level for load/stores
+--    mstatus_tw       : std_ulogic; -- do not allow user mode to execute WFI instruction when set
+--    --
+--    mie_msi          : std_ulogic; -- machine software interrupt enable
+--    mie_mei          : std_ulogic; -- machine external interrupt enable
+--    mie_mti          : std_ulogic; -- machine timer interrupt enable
+--    mie_firq         : std_ulogic_vector(15 downto 0); -- fast interrupt enable
+--    mip_firq_nclr    : std_ulogic_vector(15 downto 0); -- clear pending FIRQ (active-low)
+--    --
+--    privilege        : std_ulogic; -- current privilege mode
+--    privilege_eff    : std_ulogic; -- current *effective* privilege mode
+--    --
+--    mepc             : std_ulogic_vector(XLEN-1 downto 0); -- machine exception PC
+--    mcause           : std_ulogic_vector(5 downto 0); -- machine trap cause
+--    mtvec            : std_ulogic_vector(XLEN-1 downto 0); -- machine trap-handler base address
+--    mtval            : std_ulogic_vector(XLEN-1 downto 0); -- machine bad address or instruction
+--    mtinst           : std_ulogic_vector(XLEN-1 downto 0); -- machine trap instruction
+--    mscratch         : std_ulogic_vector(XLEN-1 downto 0); -- machine scratch register
+--    mcounteren       : std_ulogic; -- machine counter access enable (from user-mode) for ALL counters
+--    mcountinhibit    : std_ulogic_vector(15 downto 0); -- inhibit counter auto-increment
+--    mcyclecfg_minh   : std_ulogic; -- inhibit cycle counter when in machine-mode
+--    mcyclecfg_uinh   : std_ulogic; -- inhibit cycle counter when in user-mode
+--    minstretcfg_minh : std_ulogic; -- inhibit instret counter when in machine-mode
+--    minstretcfg_uinh : std_ulogic; -- inhibit instret counter when in user-mode
+--    --
+--    dcsr_ebreakm     : std_ulogic; -- behavior of ebreak instruction in m-mode
+--    dcsr_ebreaku     : std_ulogic; -- behavior of ebreak instruction in u-mode
+--    dcsr_step        : std_ulogic; -- single-step mode
+--    dcsr_prv         : std_ulogic; -- current privilege level when entering debug mode
+--    dcsr_cause       : std_ulogic_vector(2 downto 0); -- why was debug mode entered
+--    dcsr_rd          : std_ulogic_vector(XLEN-1 downto 0); -- debug mode control and status register
+--    dpc              : std_ulogic_vector(XLEN-1 downto 0); -- mode program counter
+--    dscratch0        : std_ulogic_vector(XLEN-1 downto 0); -- debug mode scratch register 0
+--    --
+--    tdata1_hit_clr   : std_ulogic; -- set to manually clear mcontrol6.hit0
+--    tdata1_execute   : std_ulogic; -- enable instruction address match trigger
+--    tdata1_action    : std_ulogic; -- enter debug mode / ebreak exception when trigger fires
+--    tdata1_dmode     : std_ulogic; -- set to ignore tdata* CSR access from machine-mode
+--    tdata1_rd        : std_ulogic_vector(XLEN-1 downto 0); -- trigger register read-back
+--    tdata2           : std_ulogic_vector(XLEN-1 downto 0); -- address-match register
+--  end record;
+>>>>>>> cdbe5e05 (Update neorv32_cpu_control.vhd)
   signal csr : csr_t;
 
   -- hpm event configuration CSRs --
-  type hpmevent_cfg_t is array (3 to 15) of std_ulogic_vector(hpmcnt_event_size_c-1 downto 0);
-  type hpmevent_rd_t  is array (3 to 15) of std_ulogic_vector(XLEN-1 downto 0);
+  type hpmevent_cfg_t is array (3 to (hpm_num_c+3)) of std_ulogic_vector(hpmcnt_event_size_c-1 downto 0);
+--  type hpmevent_rd_t  is array (3 to 15) of std_ulogic_vector(XLEN-1 downto 0);
   signal hpmevent_cfg : hpmevent_cfg_t;
   signal hpmevent_rd  : hpmevent_rd_t;
   signal hpmevent_we  : std_ulogic_vector(15 downto 0);
 
   -- counter CSRs --
-  type cnt_dat_t is array (0 to 2+hpm_num_c) of std_ulogic_vector(XLEN-1 downto 0);
+--  type cnt_dat_t is array (0 to 2+hpm_num_c) of std_ulogic_vector(XLEN-1 downto 0);
   type cnt_nxt_t is array (0 to 2+hpm_num_c) of std_ulogic_vector(XLEN downto 0);
   type cnt_ovf_t is array (0 to 2+hpm_num_c) of std_ulogic_vector(0 downto 0);
   type cnt_t is record
     we_lo : std_ulogic_vector(15 downto 0);
     we_hi : std_ulogic_vector(15 downto 0);
     inc   : std_ulogic_vector(15 downto 0);
-    lo    : cnt_dat_t; -- counter word low
-    hi    : cnt_dat_t; -- counter word high
+    lo    : cnt_dat_t(0 to 2+hpm_num_c); -- counter word low
+    hi    : cnt_dat_t(0 to 2+hpm_num_c); -- counter word high
     nxt   : cnt_nxt_t; -- increment, including carry bit
     ovf   : cnt_ovf_t; -- counter low-to-high-word overflow
   end record;
   signal cnt       : cnt_t;
-  signal cnt_lo_rd : cnt_dat_t;
-  signal cnt_hi_rd : cnt_dat_t;
+  signal cnt_lo_rd : cnt_dat_t(0 to 2+hpm_num_c);
+  signal cnt_hi_rd : cnt_dat_t(0 to 2+hpm_num_c);
 
   -- counter events --
   signal cnt_event : std_ulogic_vector(hpmcnt_event_size_c-1 downto 0);
 
   -- debug mode controller --
-  type debug_ctrl_t is record
-    running    : std_ulogic; -- CPU is in debug mode
-    trig_hw    : std_ulogic; -- hardware trigger
-    trig_break : std_ulogic; -- ebreak instruction trigger
-    trig_halt  : std_ulogic; -- external request trigger
-    trig_step  : std_ulogic; -- single-stepping mode trigger
-  end record;
+--  type debug_ctrl_t is record
+--    running    : std_ulogic; -- CPU is in debug mode
+--    trig_hw    : std_ulogic; -- hardware trigger
+--    trig_break : std_ulogic; -- ebreak instruction trigger
+--    trig_halt  : std_ulogic; -- external request trigger
+--    trig_step  : std_ulogic; -- single-stepping mode trigger
+--  end record;
   signal debug_ctrl : debug_ctrl_t;
 
   -- illegal instruction check --
