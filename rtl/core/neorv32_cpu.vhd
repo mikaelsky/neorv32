@@ -40,6 +40,7 @@ use neorv32.neorv32_package.all;
 
 entity neorv32_cpu is
   generic (
+    RVVI_TRACE_EN              : boolean := false; -- assert to enable RVVI trace debugging.
     -- General --
     HART_ID                    : std_ulogic_vector(31 downto 0); -- hardware thread ID
     VENDOR_ID                  : std_ulogic_vector(31 downto 0); -- vendor's JEDEC ID
@@ -82,6 +83,25 @@ entity neorv32_cpu is
     rstn_i     : in  std_ulogic; -- global reset, low-active, async
     sleep_o    : out std_ulogic; -- cpu is in sleep mode when set
     debug_o    : out std_ulogic; -- cpu is in debug mode when set
+    -- RVVI-Trace
+    rvvi_trace_valid_o     : out std_ulogic;   -- Retired instruction
+    rvvi_trace_insn_o      : out std_ulogic_vector((ILEN-1) downto 0);   -- Instruction bit pattern
+    rvvi_trace_insn_valid_o : out std_ulogic;
+    rvvi_trace_trap_o      : out std_ulogic;   -- Trapped instruction (External to Core, eg Memory Subsystem)
+    rvvi_trace_halt_o      : out std_ulogic;   -- Halted  instruction
+    rvvi_trace_intr_o      : out std_ulogic;   -- (RVFI Legacy) Flag first instruction of trap handler
+    rvvi_trace_mode_o      : out std_ulogic_vector(1 downto 0);   -- Privilege mode of operation
+    rvvi_trace_ixl_o       : out std_ulogic_vector(1 downto 0);   -- XLEN mode 32/64 bit
+    rvvi_trace_pc_rdata_o  : out std_ulogic_vector((XLEN-1) downto 0);   -- PC of insn
+    rvvi_trace_pc_wdata_o  : out std_ulogic_vector((XLEN-1) downto 0);   -- PC of next instruction
+    -- Control & State Registers
+    rvvi_trace_csr_o          : out rvvi_csr_t;   -- Full CSR Address range
+    rvvi_trace_csr_wb_o       : out std_ulogic_vector(4095 downto 0);   -- CSR writeback (change) flag
+    rvvi_trace_lrsc_cancel_o  : out std_ulogic;   -- Implementation defined cancel
+    -- X Registers
+    rvvi_trace_x_wdata_o   : out rvvi_xregfile_t;   -- X data value
+    rvvi_trace_x_wb_o      : out std_ulogic_vector((XLEN-1) downto 0);   -- X data writeback (change) flag
+    rvvi_trace_x_rf_wb_en_o : out std_ulogic; -- X data write back timing indicator    
     -- interrupts --
     msi_i      : in  std_ulogic; -- risc-v machine software interrupt
     mei_i      : in  std_ulogic; -- risc-v machine external interrupt
@@ -169,6 +189,71 @@ begin
   -- simulation notifier --
   assert not (is_simulation_c = true) report "[NEORV32] Assuming this is a simulation." severity warning;
 
+  -- RVVI Trace      ---------------------------------------------------------------------------
+  -- -------------------------------------------------------------------------------------------
+  neorv32_rvvi_trace_inst_true:
+  if (RVVI_TRACE_EN) generate
+    neorv32_rvvi_trace_inst: neorv32_rvvi_trace
+    generic map (
+      -- General --
+      HART_ID                    => HART_ID            ,
+      VENDOR_ID                  => VENDOR_ID          ,
+      CPU_BOOT_ADDR              => CPU_BOOT_ADDR      ,
+      CPU_DEBUG_PARK_ADDR        => CPU_DEBUG_PARK_ADDR,
+      CPU_DEBUG_EXC_ADDR         => CPU_DEBUG_EXC_ADDR ,
+      -- RISC-V CPU Extensions --
+      CPU_EXTENSION_RISCV_A      => CPU_EXTENSION_RISCV_A     ,
+      CPU_EXTENSION_RISCV_B      => CPU_EXTENSION_RISCV_B     ,
+      CPU_EXTENSION_RISCV_C      => CPU_EXTENSION_RISCV_C     ,
+      CPU_EXTENSION_RISCV_E      => CPU_EXTENSION_RISCV_E     ,
+      CPU_EXTENSION_RISCV_M      => CPU_EXTENSION_RISCV_M     ,
+      CPU_EXTENSION_RISCV_U      => CPU_EXTENSION_RISCV_U     ,
+      CPU_EXTENSION_RISCV_Zfinx  => CPU_EXTENSION_RISCV_Zfinx ,
+      CPU_EXTENSION_RISCV_Zicntr => CPU_EXTENSION_RISCV_Zicntr,
+      CPU_EXTENSION_RISCV_Zicond => CPU_EXTENSION_RISCV_Zicond,
+      CPU_EXTENSION_RISCV_Zihpm  => CPU_EXTENSION_RISCV_Zihpm ,
+      CPU_EXTENSION_RISCV_Zmmul  => CPU_EXTENSION_RISCV_Zmmul ,
+      CPU_EXTENSION_RISCV_Zxcfu  => CPU_EXTENSION_RISCV_Zxcfu ,
+      CPU_EXTENSION_RISCV_Sdext  => CPU_EXTENSION_RISCV_Sdext ,
+      CPU_EXTENSION_RISCV_Sdtrig => CPU_EXTENSION_RISCV_Sdtrig,
+      CPU_EXTENSION_RISCV_Smpmp  => pmp_enable_c ,
+      -- Tuning Options --
+      FAST_MUL_EN                => FAST_MUL_EN       ,
+      FAST_SHIFT_EN              => FAST_SHIFT_EN     ,
+      REGFILE_HW_RST             => REGFILE_HW_RST    ,
+      BOOT_ADDR_INPUT_EN         => BOOT_ADDR_INPUT_EN,
+      -- Hardware Performance Monitors (HPM) --
+      HPM_NUM_CNTS               => HPM_NUM_CNTS   ,
+      HPM_CNT_WIDTH              => HPM_CNT_WIDTH  ,
+      RUNNING_IN_SIM             => RUNNING_IN_SIM ,
+      RUNNING_IN_FPGA            => RUNNING_IN_FPGA,
+      RVE_EN                     => CPU_EXTENSION_RISCV_E
+    )
+    port map (
+      -- global control --
+      clk_i                    => clk_i ,
+      rstn_i                   => rstn_i,
+      -- RVVI-Trace
+      rvvi_trace_valid_o       => rvvi_trace_valid_o,
+      rvvi_trace_insn_o        => rvvi_trace_insn_o,
+      rvvi_trace_insn_valid_o  => rvvi_trace_insn_valid_o,
+      rvvi_trace_trap_o        => rvvi_trace_trap_o,
+      rvvi_trace_halt_o        => rvvi_trace_halt_o,
+      rvvi_trace_intr_o        => rvvi_trace_intr_o,
+      rvvi_trace_mode_o        => rvvi_trace_mode_o,
+      rvvi_trace_ixl_o         => rvvi_trace_ixl_o,
+      rvvi_trace_pc_rdata_o    => rvvi_trace_pc_rdata_o,
+      rvvi_trace_pc_wdata_o    => rvvi_trace_pc_wdata_o,
+      -- Processor registers
+      rvvi_trace_x_wdata_o     => rvvi_trace_x_wdata_o,
+      rvvi_trace_x_wb_o        => rvvi_trace_x_wb_o,
+      rvvi_trace_x_rf_wb_en_o  => rvvi_trace_x_rf_wb_en_o,
+      -- Control & State Registers
+      rvvi_trace_csr_o         => rvvi_trace_csr_o,
+      rvvi_trace_csr_wb_o      => rvvi_trace_csr_wb_o,
+      rvvi_trace_lrsc_cancel_o => rvvi_trace_lrsc_cancel_o
+    );
+  end generate;
 
   -- Control Unit ---------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
